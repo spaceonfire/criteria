@@ -4,100 +4,93 @@ declare(strict_types=1);
 
 namespace spaceonfire\Criteria;
 
-use spaceonfire\Criteria\Expression\ExpressionFactory;
 use Webmozart\Expression\Expression;
 
 interface CriteriaInterface
 {
     /**
-     * Getter for `expression` property
+     * Returns criteria `where` expression.
      * @return Expression|null
      */
     public function getWhere(): ?Expression;
 
     /**
-     * Setter for `expression` property
+     * Replaces criteria `where` expression.
      * @param Expression|null $expression
-     * @return $this
+     * @return static new criteria object.
      */
     public function where(?Expression $expression): self;
 
     /**
      * Joins provided expression with current one using conjunction.
      * @param Expression $expression
-     * @return $this
+     * @return static new criteria object.
      */
     public function andWhere(Expression $expression): self;
 
     /**
      * Joins provided expression with current one using disjunction.
      * @param Expression $expression
-     * @return $this
+     * @return static new criteria object.
      */
     public function orWhere(Expression $expression): self;
 
     /**
-     * Getter for `orderBy` property
+     * Returns criteria `orderBy` option.
      * @return array<string,int>
      */
     public function getOrderBy(): array;
 
     /**
-     * Setter for `orderBy` property
+     * Replaces criteria `orderBy` option.
      * @param array<string,int> $orderBy
-     * @return $this
+     * @return static new criteria object.
      */
     public function orderBy(array $orderBy): self;
 
     /**
-     * Getter for `offset` property
+     * Returns criteria `offset` option.
      * @return int
      */
     public function getOffset(): int;
 
     /**
-     * Setter for `offset` property
+     * Replaces criteria `offset` option.
      * @param int|null $offset
-     * @return $this
+     * @return static new criteria object.
      */
     public function offset(?int $offset): self;
 
     /**
-     * Getter for `limit` property
+     * Returns criteria `limit` option.
      * @return int|null
      */
     public function getLimit(): ?int;
 
     /**
-     * Setter for `limit` property
+     * Replaces criteria `limit` option.
      * @param int|null $limit
-     * @return $this
+     * @return static new criteria object.
      */
     public function limit(?int $limit): self;
 
     /**
-     * Getter for `include` property
+     * Returns criteria `include` option.
      * @return mixed[]
      */
     public function getInclude(): array;
 
     /**
-     * Setter for `include` property
+     * Replaces criteria `include` option.
      * @param mixed[] $include
-     * @return $this
+     * @return static new criteria object.
      */
     public function include(array $include): self;
 
     /**
-     * Merges parameters from current criteria and provided one
+     * Merges parameters from current criteria and given one.
      * @param CriteriaInterface $criteria
-     * @return CriteriaInterface
+     * @return static new criteria object.
      */
     public function merge(self $criteria): self;
-
-    /**
-     * Returns expression factory
-     * @return ExpressionFactory
-     */
-    public static function expr(): ExpressionFactory;
 }

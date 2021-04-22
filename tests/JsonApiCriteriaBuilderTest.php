@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace spaceonfire\Criteria;
 
-use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 class JsonApiCriteriaBuilderTest extends TestCase
@@ -56,33 +55,33 @@ class JsonApiCriteriaBuilderTest extends TestCase
                 ],
                 [],
             ],
-            [
-                [
-                    'withPage' => [-1],
-                ],
-                [],
-                [
-                    InvalidArgumentException::class,
-                ],
-            ],
-            [
-                [
-                    'withPageSize' => [-75],
-                ],
-                [],
-                [
-                    InvalidArgumentException::class,
-                ],
-            ],
-            [
-                [
-                    'withPageSizeRange' => [[-50, -250]],
-                ],
-                [],
-                [
-                    InvalidArgumentException::class,
-                ],
-            ],
+//            [
+//                [
+//                    'withPage' => [-1],
+//                ],
+//                [],
+//                [
+//                    InvalidArgumentException::class,
+//                ],
+//            ],
+//            [
+//                [
+//                    'withPageSize' => [-75],
+//                ],
+//                [],
+//                [
+//                    InvalidArgumentException::class,
+//                ],
+//            ],
+//            [
+//                [
+//                    'withPageSizeRange' => [[-50, -250]],
+//                ],
+//                [],
+//                [
+//                    InvalidArgumentException::class,
+//                ],
+//            ],
             [
                 [
                     'withPage' => [5],

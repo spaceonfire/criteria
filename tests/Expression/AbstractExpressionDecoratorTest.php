@@ -6,7 +6,6 @@ namespace spaceonfire\Criteria\Expression;
 
 use BadMethodCallException;
 use PHPUnit\Framework\TestCase;
-use spaceonfire\Criteria\Criteria;
 use Webmozart\Expression\Expression;
 use Webmozart\Expression\Logic;
 
@@ -20,7 +19,7 @@ class AbstractExpressionDecoratorTest extends TestCase
 
     public function testGetInnerExpression(): void
     {
-        $innerExpression = Criteria::expr()->property('field', Criteria::expr()->same('value'));
+        $innerExpression = ExpressionFactory::new()->property('field', ExpressionFactory::new()->same('value'));
         $middleExpression = $this->factory($innerExpression);
         $outerExpression = $this->factory($middleExpression);
 
@@ -30,7 +29,7 @@ class AbstractExpressionDecoratorTest extends TestCase
 
     public function testEvaluate(): void
     {
-        $expr = $this->factory(Criteria::expr()->key('field', Criteria::expr()->same('value')));
+        $expr = $this->factory(ExpressionFactory::new()->key('field', ExpressionFactory::new()->same('value')));
 
         self::assertTrue($expr->evaluate(['field' => 'value']));
         self::assertFalse($expr->evaluate(['field' => 'value2']));
@@ -39,7 +38,7 @@ class AbstractExpressionDecoratorTest extends TestCase
 
     public function testEquivalentTo(): void
     {
-        $innerExpr = Criteria::expr()->key('field', Criteria::expr()->same('value'));
+        $innerExpr = ExpressionFactory::new()->key('field', ExpressionFactory::new()->same('value'));
         $exprA = $this->factory($innerExpr);
         $exprB = $this->factory($innerExpr);
 
@@ -49,38 +48,38 @@ class AbstractExpressionDecoratorTest extends TestCase
 
     public function testToString(): void
     {
-        $innerExpr = Criteria::expr()->key('field', Criteria::expr()->same('value'));
+        $innerExpr = ExpressionFactory::new()->key('field', ExpressionFactory::new()->same('value'));
         $expr = $this->factory($innerExpr);
         self::assertEquals($innerExpr->toString(), $expr->toString());
     }
 
     public function testAndXWithInnerAndX(): void
     {
-        $expr = $this->factory(Criteria::expr()->andX([
-            Criteria::expr()->key('field1', Criteria::expr()->same('value1')),
-            Criteria::expr()->key('field2', Criteria::expr()->same('value2')),
+        $expr = $this->factory(ExpressionFactory::new()->andX([
+            ExpressionFactory::new()->key('field1', ExpressionFactory::new()->same('value1')),
+            ExpressionFactory::new()->key('field2', ExpressionFactory::new()->same('value2')),
         ]));
 
-        $newExpr = $expr->andX(Criteria::expr()->key('field3', Criteria::expr()->same('value3')));
+        $newExpr = $expr->andX(ExpressionFactory::new()->key('field3', ExpressionFactory::new()->same('value3')));
 
         self::assertInstanceOf(Logic\AndX::class, $newExpr);
     }
 
     public function testOrXWithInnerOrX(): void
     {
-        $expr = $this->factory(Criteria::expr()->orX([
-            Criteria::expr()->key('field1', Criteria::expr()->same('value1')),
-            Criteria::expr()->key('field2', Criteria::expr()->same('value2')),
+        $expr = $this->factory(ExpressionFactory::new()->orX([
+            ExpressionFactory::new()->key('field1', ExpressionFactory::new()->same('value1')),
+            ExpressionFactory::new()->key('field2', ExpressionFactory::new()->same('value2')),
         ]));
 
-        $newExpr = $expr->orX(Criteria::expr()->key('field3', Criteria::expr()->same('value3')));
+        $newExpr = $expr->orX(ExpressionFactory::new()->key('field3', ExpressionFactory::new()->same('value3')));
 
         self::assertInstanceOf(Logic\OrX::class, $newExpr);
     }
 
     public function testAndXWithEquivalent(): void
     {
-        $innerExpr = Criteria::expr()->key('field', Criteria::expr()->same('value'));
+        $innerExpr = ExpressionFactory::new()->key('field', ExpressionFactory::new()->same('value'));
         $exprA = $this->factory($innerExpr);
         $exprB = $this->factory($innerExpr);
 
@@ -89,7 +88,7 @@ class AbstractExpressionDecoratorTest extends TestCase
 
     public function testOrXWithEquivalent(): void
     {
-        $innerExpr = Criteria::expr()->key('field', Criteria::expr()->same('value'));
+        $innerExpr = ExpressionFactory::new()->key('field', ExpressionFactory::new()->same('value'));
         $exprA = $this->factory($innerExpr);
         $exprB = $this->factory($innerExpr);
 
@@ -103,7 +102,7 @@ class AbstractExpressionDecoratorTest extends TestCase
      */
     public function testAndMagicMethods(string $method, array $arguments = []): void
     {
-        $expr = $this->factory(Criteria::expr()->key('field', Criteria::expr()->same('value')));
+        $expr = $this->factory(ExpressionFactory::new()->key('field', ExpressionFactory::new()->same('value')));
         $magicMethod = 'and' . ucfirst($method);
         $newExpr = call_user_func_array([$expr, $magicMethod], $arguments);
 
@@ -125,7 +124,7 @@ class AbstractExpressionDecoratorTest extends TestCase
      */
     public function testOrMagicMethods(string $method, array $arguments = []): void
     {
-        $expr = $this->factory(Criteria::expr()->key('field', Criteria::expr()->same('value')));
+        $expr = $this->factory(ExpressionFactory::new()->key('field', ExpressionFactory::new()->same('value')));
         $magicMethod = 'or' . ucfirst($method);
         $newExpr = call_user_func_array([$expr, $magicMethod], $arguments);
 
@@ -142,7 +141,7 @@ class AbstractExpressionDecoratorTest extends TestCase
 
     public function magicMethodProvider(): array
     {
-        $exprFactory = Criteria::expr();
+        $exprFactory = ExpressionFactory::new();
         return [
             ['all', [$exprFactory->isEmpty()]],
             ['atLeast', [1, $exprFactory->isEmpty()]],
@@ -185,7 +184,7 @@ class AbstractExpressionDecoratorTest extends TestCase
     public function testMagicMethodUnknown(string $method): void
     {
         $this->expectException(BadMethodCallException::class);
-        $expr = $this->factory(Criteria::expr()->key('field', Criteria::expr()->same('value')));
+        $expr = $this->factory(ExpressionFactory::new()->key('field', ExpressionFactory::new()->same('value')));
         call_user_func_array([$expr, $method], []);
     }
 

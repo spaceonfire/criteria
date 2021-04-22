@@ -19,8 +19,12 @@ $ composer require spaceonfire/criteria
 
 ```php
 use spaceonfire\Criteria\Criteria;
-$criteria = new Criteria();
-$criteria->where(Criteria::expr()->property('name', Criteria::expr()->equals('Ben')))
+use spaceonfire\Criteria\Expression\ExpressionFactory;
+
+$criteria = Criteria::new();
+$ef = ExpressionFactory::new();
+
+$criteria->where($ef->property('name', $ef->equals('Ben')))
     ->orderBy(['lastName' => SORT_ASC])
     ->offset(50)
     ->limit(25);

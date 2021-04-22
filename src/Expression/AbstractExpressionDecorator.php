@@ -4,14 +4,11 @@ declare(strict_types=1);
 
 namespace spaceonfire\Criteria\Expression;
 
-use spaceonfire\Criteria\Criteria;
-use Symfony\Component\PropertyAccess\PropertyPath;
+use spaceonfire\Common\Field\FieldInterface;
 use Webmozart\Expression\Expression;
 use Webmozart\Expression\Logic;
 
 /**
- * Class AbstractExpressionDecorator.
- *
  * @method Logic\AndX andNot(Expression $expr)
  * @method Logic\AndX andMethod(string $methodName, mixed[] $args, Expression $expr)
  * @method Logic\AndX andAtLeast(int $count, Expression $expr)
@@ -40,7 +37,7 @@ use Webmozart\Expression\Logic;
  * @method Logic\AndX andKeyExists(string $keyName)
  * @method Logic\AndX andKeyNotExists(string $keyName)
  * @method Logic\AndX andKey(string|int $key, Expression $expr)
- * @method Logic\AndX andProperty(string|PropertyPath $propertyName, Expression $expr)
+ * @method Logic\AndX andProperty(string|FieldInterface $propertyName, Expression $expr)
  * @method self andTrue()
  * @method Logic\AlwaysFalse andFalse()
  * @method Logic\OrX orNot(Expression $expr)
@@ -71,46 +68,46 @@ use Webmozart\Expression\Logic;
  * @method Logic\OrX orKeyExists(string $keyName)
  * @method Logic\OrX orKeyNotExists(string $keyName)
  * @method Logic\OrX orKey(string|int $key, Expression $expr)
- * @method Logic\OrX orProperty(string|PropertyPath $propertyName, Expression $expr)
+ * @method Logic\OrX orProperty(string|FieldInterface $propertyName, Expression $expr)
  * @method Logic\AlwaysTrue orTrue()
  * @method self orFalse()
  */
-class AbstractExpressionDecorator implements Expression
+abstract class AbstractExpressionDecorator implements Expression
 {
-    /**
-     * @var Expression
-     */
-    private $expr;
+    private Expression $expr;
 
-    /**
-     * Expression Adapter constructor
-     * @param Expression $expr
-     */
     public function __construct(Expression $expr)
     {
         $this->expr = $expr;
     }
 
     /**
+     * Magic logical chaining.
      * @param string $name
-     * @param array $arguments
+     * @param mixed[] $arguments
      * @return Expression
      * @see ExpressionFactory
      */
     public function __call(string $name, array $arguments = [])
     {
-        if (null !== $expr = $this->magicLogicalExpression($name, $arguments)) {
-            return $expr;
+        $isAnd = \str_starts_with($name, 'and');
+        $isOr = \str_starts_with($name, 'or');
+
+        if (!$isAnd && !$isOr) {
+            throw new \BadMethodCallException(\sprintf('Call to an undefined method %s::%s()', static::class, $name));
         }
 
-        throw new \BadMethodCallException(sprintf('Call to an undefined method %s::%s()', static::class, $name));
+        $factoryMethod = \lcfirst(\substr($name, $isAnd ? 3 : 2));
+
+        if (\str_starts_with($factoryMethod, 'and') || \str_starts_with($factoryMethod, 'or')) {
+            throw new \BadMethodCallException(\sprintf('Call to an undefined method %s::%s()', static::class, $name));
+        }
+
+        $expr = \call_user_func_array([ExpressionFactory::new(), $factoryMethod], $arguments);
+
+        return $isAnd ? $this->andX($expr) : $this->orX($expr);
     }
 
-    /**
-     * Getter for `expr` property
-     * @param bool $recursive
-     * @return Expression
-     */
     public function getInnerExpression(bool $recursive = true): Expression
     {
         if ($recursive && $this->expr instanceof self) {
@@ -120,30 +117,20 @@ class AbstractExpressionDecorator implements Expression
         return $this->expr;
     }
 
-    /**
-     * @inheritDoc
-     */
     public function evaluate($value): bool
     {
         return $this->expr->evaluate($value);
     }
 
-    /**
-     * @inheritDoc
-     */
     public function equivalentTo(Expression $other): bool
     {
-        if (static::class !== get_class($other)) {
+        if (!$other instanceof static) {
             return false;
         }
 
-        /** @var self $other */
         return $this->expr->equivalentTo($other->expr);
     }
 
-    /**
-     * @inheritDoc
-     */
     public function toString(): string
     {
         return $this->expr->toString();
@@ -193,31 +180,5 @@ class AbstractExpressionDecorator implements Expression
         }
 
         return new Logic\OrX([$this, $expr]);
-    }
-
-    private function magicLogicalExpression(string $name, array $arguments): ?Expression
-    {
-        $isAnd = 0 === strpos($name, 'and');
-        $isOr = 0 === strpos($name, 'or');
-
-        if (!$isAnd && !$isOr) {
-            return null;
-        }
-
-        $factoryMethod = lcfirst(substr($name, $isAnd ? 3 : 2));
-
-        if (0 === stripos($factoryMethod, 'and') || 0 === stripos($factoryMethod, 'or')) {
-            return null;
-        }
-
-        $factory = [Criteria::expr(), $factoryMethod];
-
-        if (!is_callable($factory)) {
-            return null;
-        }
-
-        $expr = call_user_func_array($factory, $arguments);
-
-        return $isAnd ? $this->andX($expr) : $this->orX($expr);
     }
 }

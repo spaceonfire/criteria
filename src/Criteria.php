@@ -4,58 +4,50 @@ declare(strict_types=1);
 
 namespace spaceonfire\Criteria;
 
+use spaceonfire\Common\Factory\StaticConstructorInterface;
 use spaceonfire\Criteria\Expression\ExpressionFactory;
-use Webmozart\Assert\Assert;
 use Webmozart\Expression\Expression;
+use Webmozart\Expression\Logic\AndX;
+use Webmozart\Expression\Logic\OrX;
 
-class Criteria implements CriteriaInterface
+final class Criteria implements CriteriaInterface, StaticConstructorInterface
 {
-    /**
-     * @var Expression|null
-     */
-    protected $expression;
+    private ?Expression $expression = null;
 
     /**
      * @var array<string,int>
      */
-    protected $orderBy = [];
+    private array $orderBy = [];
 
-    /**
-     * @var int|null
-     */
-    protected $offset;
+    private ?int $offset = null;
 
-    /**
-     * @var int|null
-     */
-    protected $limit;
+    private ?int $limit = null;
 
     /**
      * @var mixed[]
      */
-    protected $include = [];
+    private array $include = [];
+
+    private function __construct()
+    {
+    }
 
     /**
-     * @var ExpressionFactory
-     */
-    private static $expressionFactory;
-
-    /**
-     * Criteria constructor.
      * @param Expression|null $where
      * @param array<string,int> $orderBy
      * @param int|null $offset
      * @param int|null $limit
      * @param mixed[] $include
+     * @return static
      */
-    public function __construct(
+    public static function new(
         ?Expression $where = null,
         array $orderBy = [],
         ?int $offset = null,
         ?int $limit = null,
         array $include = []
-    ) {
-        $this
+    ): self {
+        return (new self())
             ->where($where)
             ->orderBy($orderBy)
             ->offset($offset)
@@ -63,157 +55,123 @@ class Criteria implements CriteriaInterface
             ->include($include);
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getWhere(): ?Expression
     {
         return $this->expression;
     }
 
-    /**
-     * @inheritDoc
-     */
     public function where(?Expression $expression): CriteriaInterface
     {
-        $this->expression = $expression;
-        return $this;
+        $clone = clone $this;
+        $clone->expression = $expression;
+        return $clone;
     }
 
-    /**
-     * @inheritDoc
-     */
     public function andWhere(Expression $expression): CriteriaInterface
     {
         if (null === $this->expression) {
             return $this->where($expression);
         }
 
-        return $this->where(self::expr()->andX([$this->expression, $expression]));
+        return $this->where(new AndX([$this->expression, $expression]));
     }
 
-    /**
-     * @inheritDoc
-     */
     public function orWhere(Expression $expression): CriteriaInterface
     {
         if (null === $this->expression) {
             return $this->where($expression);
         }
 
-        return $this->where(self::expr()->orX([$this->expression, $expression]));
+        return $this->where(new OrX([$this->expression, $expression]));
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getOrderBy(): array
     {
         return $this->orderBy;
     }
 
-    /**
-     * @inheritDoc
-     */
     public function orderBy(array $orderBy): CriteriaInterface
     {
-        $invalidMessage = 'Argument $orderBy must be an array where string keys mapped to `SORT_ASC` or `SORT_DESC` constants.';
-        Assert::allString(array_keys($orderBy), $invalidMessage);
-        Assert::allOneOf($orderBy, [SORT_ASC, SORT_DESC], $invalidMessage);
-        $this->orderBy = $orderBy;
-        return $this;
+        foreach ($orderBy as $offset => $direction) {
+            if (!\is_string($offset) || (\SORT_ASC !== $direction && \SORT_DESC !== $direction)) {
+                throw new \InvalidArgumentException(
+                    'Argument #1 ($orderBy) must be an array where string keys mapped to SORT_ASC or SORT_DESC constants.'
+                );
+            }
+        }
+
+        $clone = clone $this;
+        $clone->orderBy = $orderBy;
+        return $clone;
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getOffset(): int
     {
         return $this->offset ?? 0;
     }
 
-    /**
-     * @inheritDoc
-     */
     public function offset(?int $offset): CriteriaInterface
     {
-        $this->offset = $offset;
-        return $this;
+        $clone = clone $this;
+        $clone->offset = $offset;
+        return $clone;
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getLimit(): ?int
     {
         return $this->limit;
     }
 
-    /**
-     * @inheritDoc
-     */
     public function limit(?int $limit): CriteriaInterface
     {
-        $this->limit = $limit;
-        return $this;
+        $clone = clone $this;
+        $clone->limit = $limit;
+        return $clone;
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getInclude(): array
     {
         return $this->include;
     }
 
-    /**
-     * @inheritDoc
-     */
     public function include(array $include): CriteriaInterface
     {
-        $this->include = $include;
-        return $this;
+        $clone = clone $this;
+        $clone->include = $include;
+        return $clone;
     }
 
-    /**
-     * @inheritDoc
-     * The original criteria will not be changed, a new one will be returned instead.
-     */
     public function merge(CriteriaInterface $criteria): CriteriaInterface
     {
         $clone = clone $this;
 
         if (!empty($criteria->getOrderBy())) {
-            $clone->orderBy($criteria->getOrderBy());
+            $clone = $clone->orderBy($criteria->getOrderBy());
         }
 
         if (!empty($criteria->getInclude())) {
-            $clone->include($criteria->getInclude());
+            $clone = $clone->include($criteria->getInclude());
         }
 
         if (null !== $criteria->getLimit()) {
-            $clone->limit($criteria->getLimit());
-            $clone->offset($criteria->getOffset());
+            $clone = $clone->limit($criteria->getLimit());
+            $clone = $clone->offset($criteria->getOffset());
         } elseif (0 < $criteria->getOffset()) {
-            $clone->offset($criteria->getOffset());
+            $clone = $clone->offset($criteria->getOffset());
         }
 
         if (null !== $criteria->getWhere()) {
-            $clone->where($criteria->getWhere());
+            $clone = $clone->where($criteria->getWhere());
         }
 
         return $clone;
     }
 
     /**
-     * @inheritDoc
+     * @deprecated use {@see ExpressionFactory::new()} instead.
      */
     public static function expr(): ExpressionFactory
     {
-        if (null === self::$expressionFactory) {
-            self::$expressionFactory = new ExpressionFactory();
-        }
-
-        return self::$expressionFactory;
+        return ExpressionFactory::new();
     }
 }

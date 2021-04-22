@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace spaceonfire\Criteria\Expression;
 
-use BadMethodCallException;
-use Symfony\Component\PropertyAccess\PropertyPath;
+use spaceonfire\Common\Factory\SingletonStorageTrait;
+use spaceonfire\Common\Factory\StaticConstructorInterface;
+use spaceonfire\Common\Field\FieldFactoryAggregate;
+use spaceonfire\Common\Field\FieldFactoryInterface;
+use spaceonfire\Common\Field\FieldInterface;
 use Webmozart\Expression\Constraint\Contains;
 use Webmozart\Expression\Constraint\EndsWith;
 use Webmozart\Expression\Constraint\Equals;
@@ -38,8 +41,6 @@ use Webmozart\Expression\Selector\Exactly;
 use Webmozart\Expression\Selector\Method;
 
 /**
- * Class ExpressionFactory.
- *
  * @method Not not(Expression $expr)
  * @method AndX andX(Expression[] $conjuncts)
  * @method OrX orX(Expression[] $disjuncts)
@@ -72,12 +73,11 @@ use Webmozart\Expression\Selector\Method;
  * @method KeyExists keyExists(string $keyName)
  * @method KeyNotExists keyNotExists(string $keyName)
  */
-class ExpressionFactory
+final class ExpressionFactory implements StaticConstructorInterface
 {
+    use SingletonStorageTrait;
+
     /**
-     * @param string $name
-     * @param mixed[] $arguments
-     * @return mixed
      * @see Expr::all()
      * @see Expr::andX()
      * @see Expr::atLeast()
@@ -110,83 +110,138 @@ class ExpressionFactory
      * @see Expr::startsWith()
      * @see Expr::true()
      */
+    private const PROXY_METHODS = [
+        'all' => true,
+        'andX' => true,
+        'atLeast' => true,
+        'atMost' => true,
+        'contains' => true,
+        'count' => true,
+        'endsWith' => true,
+        'equals' => true,
+        'exactly' => true,
+        'false' => true,
+        'greaterThan' => true,
+        'greaterThanEqual' => true,
+        'in' => true,
+        'isEmpty' => true,
+        'isInstanceOf' => true,
+        'keyExists' => true,
+        'keyNotExists' => true,
+        'lessThan' => true,
+        'lessThanEqual' => true,
+        'matches' => true,
+        'method' => true,
+        'not' => true,
+        'notEmpty' => true,
+        'notEquals' => true,
+        'notNull' => true,
+        'notSame' => true,
+        'null' => true,
+        'orX' => true,
+        'same' => true,
+        'startsWith' => true,
+        'true' => true,
+    ];
+
+    private ?FieldFactoryInterface $fieldFactory = null;
+
+    private function __construct()
+    {
+        self::singletonAttach($this);
+    }
+
+    public function __destruct()
+    {
+        self::singletonDetach($this);
+    }
+
+    /**
+     * @param string $name
+     * @param mixed[] $arguments
+     * @return Expression
+     */
     public function __call(string $name, array $arguments = [])
     {
-        if (null !== $expr = $this->proxyCall($name, $arguments)) {
-            return $expr;
+        if (!isset(self::PROXY_METHODS[$name])) {
+            throw new \BadMethodCallException(\sprintf('Call to an undefined method %s::%s().', self::class, $name));
         }
 
-        throw new BadMethodCallException('Call to an undefined method ' . static::class . '::' . $name . '()');
+        return \call_user_func_array([Expr::class, $name], $arguments);
+    }
+
+    public static function new(): self
+    {
+        return self::singletonFetch(self::singletonKey()) ?? new self();
+    }
+
+    public function setFieldFactory(FieldFactoryInterface $fieldFactory): void
+    {
+        $this->fieldFactory = $fieldFactory;
+    }
+
+    /**
+     * @param string|FieldInterface $field
+     * @param Expression $expression
+     * @return Selector
+     */
+    public function selector($field, Expression $expression): Selector
+    {
+        return new Selector($this->makeField($field), $expression);
     }
 
     /**
      * Check that the value of an array key matches an expression.
-     * @param string|int $key The array key.
+     * @param array-key $key The array key.
      * @param Expression $expr The evaluated expression.
-     * @return Selector The created expression.
+     * @return Selector
      */
     public function key($key, Expression $expr): Selector
     {
-        return Selector::makeFromKey(Expr::key($key, $expr));
+        return $this->selector('[' . $key . ']', $expr);
     }
 
     /**
      * Check that the value of a object property/array key/mixed matches an expression.
-     * @param string|PropertyPath $propertyName The name of the property.
+     * @param string|FieldInterface $propertyName The name of the property.
      * @param Expression $expr The evaluated expression.
-     * @return Selector The created expression.
+     * @return Selector
      */
     public function property($propertyName, Expression $expr): Selector
     {
-        return new Selector($propertyName, $expr);
+        return $this->selector($propertyName, $expr);
     }
 
-    private function proxyCall(string $name, array $arguments = []): ?Expression
+    /**
+     * @param self $value
+     * @return string
+     */
+    protected static function singletonKey($value = null): string
     {
-        $proxyMethods = [
-            'all' => true,
-            'andX' => true,
-            'atLeast' => true,
-            'atMost' => true,
-            'contains' => true,
-            'count' => true,
-            'endsWith' => true,
-            'equals' => true,
-            'exactly' => true,
-            'false' => true,
-            'greaterThan' => true,
-            'greaterThanEqual' => true,
-            'in' => true,
-            'isEmpty' => true,
-            'isInstanceOf' => true,
-            'keyExists' => true,
-            'keyNotExists' => true,
-            'lessThan' => true,
-            'lessThanEqual' => true,
-            'matches' => true,
-            'method' => true,
-            'not' => true,
-            'notEmpty' => true,
-            'notEquals' => true,
-            'notNull' => true,
-            'notSame' => true,
-            'null' => true,
-            'orX' => true,
-            'same' => true,
-            'startsWith' => true,
-            'true' => true,
-        ];
+        return self::class;
+    }
 
-        if (!array_key_exists($name, $proxyMethods)) {
-            return null;
+    /**
+     * @param FieldInterface|\Stringable|string|mixed $field
+     * @return FieldInterface
+     */
+    private function makeField($field): FieldInterface
+    {
+        if ($field instanceof FieldInterface) {
+            return $field;
         }
 
-        $factory = [Expr::class, $name];
-
-        if (!is_callable($factory)) {
-            return null;
+        if (\is_object($field) && \method_exists($field, '__toString')) {
+            $field = (string)$field;
         }
 
-        return call_user_func_array($factory, $arguments) ?: null;
+        if (\is_string($field)) {
+            return ($this->fieldFactory ??= FieldFactoryAggregate::default())->make($field);
+        }
+
+        throw new \InvalidArgumentException(\sprintf(
+            'Argument #1 ($field) expected to be a instance of FieldInterface, string or stringable object. Got: %s.',
+            \get_debug_type($field),
+        ));
     }
 }

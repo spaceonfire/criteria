@@ -4,46 +4,39 @@ declare(strict_types=1);
 
 namespace spaceonfire\Criteria;
 
-use Webmozart\Assert\Assert;
-
 /**
  * Class JsonApiCriteriaBuilder
  *
  * Provides a way to build criteria for JSON API request
  *
- * TODO: support parsing filter
+ * @deprecated
+ * @todo replace with data grid component with more complex criteria factory
  */
-class JsonApiCriteriaBuilder
+final class JsonApiCriteriaBuilder
 {
-    /**
-     * @var int|null
-     */
-    protected $page;
+    private ?int $page = null;
 
-    /**
-     * @var int|null
-     */
-    protected $pageSize;
+    private ?int $pageSize = null;
 
     /**
      * @var int[]
      */
-    protected $pageSizeRange = [10, 250];
+    private array $pageSizeRange = [10, 250];
 
     /**
      * @var array<string,int>|null
      */
-    protected $orderings;
+    private ?array $orderings = null;
 
     /**
-     * @var array|null
+     * @var string[]|null
      */
-    protected $allowedOrderByFields;
+    private ?array $allowedOrderByFields = null;
 
     /**
      * @var mixed[]
      */
-    protected $include = [];
+    private array $include = [];
 
     /**
      * Set page number
@@ -52,7 +45,6 @@ class JsonApiCriteriaBuilder
      */
     public function withPage(int $page): self
     {
-        Assert::natural($page);
         $builder = clone $this;
         $builder->page = $page;
         return $builder;
@@ -65,7 +57,6 @@ class JsonApiCriteriaBuilder
      */
     public function withPageSize(int $pageSize): self
     {
-        Assert::natural($pageSize);
         $builder = clone $this;
         $builder->pageSize = $pageSize;
         return $builder;
@@ -78,12 +69,11 @@ class JsonApiCriteriaBuilder
      */
     public function withPageSizeRange(array $pageSizeRange): self
     {
-        Assert::allNatural($pageSizeRange);
-        Assert::count($pageSizeRange, 2);
+        \assert(2 === count($pageSizeRange));
 
-        $pageSizeRange = array_values($pageSizeRange);
+        $pageSizeRange = \array_values($pageSizeRange);
         if ($pageSizeRange[0] > $pageSizeRange[1]) {
-            $pageSizeRange = array_reverse($pageSizeRange);
+            $pageSizeRange = \array_reverse($pageSizeRange);
         }
 
         $builder = clone $this;
@@ -101,13 +91,13 @@ class JsonApiCriteriaBuilder
         $builder = clone $this;
 
         $orderings = [];
-        foreach (array_filter(explode(',', $sort)) as $sortRule) {
-            if (0 === strpos($sortRule, '-')) {
-                $sortField = substr($sortRule, 1);
-                $sortDirection = SORT_DESC;
+        foreach (\array_filter(\explode(',', $sort)) as $sortRule) {
+            if (0 === \strpos($sortRule, '-')) {
+                $sortField = \substr($sortRule, 1);
+                $sortDirection = \SORT_DESC;
             } else {
                 $sortField = $sortRule;
-                $sortDirection = SORT_ASC;
+                $sortDirection = \SORT_ASC;
             }
 
             $orderings[$sortField] = $sortDirection;
@@ -122,12 +112,11 @@ class JsonApiCriteriaBuilder
 
     /**
      * Set fields that allowed to use for sorting
-     * @param array $allowedOrderByFields
+     * @param string[] $allowedOrderByFields
      * @return $this
      */
     public function withAllowedOrderByFields(array $allowedOrderByFields): self
     {
-        Assert::allString($allowedOrderByFields);
         $builder = clone $this;
         $builder->allowedOrderByFields = $allowedOrderByFields;
         return $builder;
@@ -151,21 +140,16 @@ class JsonApiCriteriaBuilder
      */
     public function build(): CriteriaInterface
     {
-        $criteria = new Criteria();
-
-        if (is_array($this->orderings)) {
-            if (null !== $this->allowedOrderByFields) {
-                $this->orderings = array_intersect_key($this->orderings, array_flip($this->allowedOrderByFields));
-            }
-
-            $criteria->orderBy($this->orderings);
+        if (\is_array($this->orderings) && null !== $this->allowedOrderByFields) {
+            $this->orderings = \array_intersect_key($this->orderings, \array_flip($this->allowedOrderByFields));
         }
 
-        $pageSize = min(max($this->pageSize, $this->pageSizeRange[0]), $this->pageSizeRange[1]);
-        $criteria->limit($pageSize)->offset($pageSize * ($this->page - 1));
+        $pageSize = \min(\max($this->pageSize, $this->pageSizeRange[0]), $this->pageSizeRange[1]);
 
-        $criteria->include($this->include);
-
-        return $criteria;
+        return Criteria::new()
+            ->orderBy($this->orderings ?? [])
+            ->limit($pageSize)
+            ->offset($pageSize * ($this->page - 1))
+            ->include($this->include);
     }
 }
